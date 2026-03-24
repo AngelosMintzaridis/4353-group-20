@@ -3,7 +3,7 @@ const { users } = require('../data/memoryData');
 exports.register = (req, res) => {
     const { name, email, password, role } = req.body;
 
-    // This is the log that will show in your backend terminal
+    // this log prints in ur backend termnal
     console.log('--- NEW REGISTRATION ATTEMPT ---');
     console.log(`Name: ${name}`);
     console.log(`Email: ${email}`);
@@ -22,17 +22,29 @@ exports.register = (req, res) => {
 
 exports.login = (req, res) => {
     const { email, password } = req.body;
-    
-    console.log(`Login attempt for: ${email}`);
+
+    console.log('--- USER LOGIN ATTEMPT ---');
+    console.log(`Email: ${email || '(missing)'}`);
+    console.log('--------------------------');
+
+    if (!email || !password) {
+        console.warn('Login failed: missing email or password');
+        return res.status(400).json({ message: 'Email and password are required' });
+    }
 
     const user = users.find(u => u.email === email && u.password === password);
 
     if (!user) {
-        console.warn(`Login failed for: ${email}`);
+        console.warn(`Login failed: invalid credentials for ${email}`);
         return res.status(401).json({ message: 'invalid email or password' });
     }
 
-    console.log(`Login successful for: ${email}`);
+    console.log('--- USER LOGGED IN ---');
+    console.log(`Name: ${user.name}`);
+    console.log(`Email: ${user.email}`);
+    console.log(`Role: ${user.role}`);
+    console.log('----------------------');
+
     res.json({
         message: 'login successful',
         user: { name: user.name, email: user.email, role: user.role }
