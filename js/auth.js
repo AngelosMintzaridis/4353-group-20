@@ -1,9 +1,9 @@
 /* ========================================
-   QueueSmart — Authentication Logic
+   queuesmart auth logic
    ======================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Determine which form is on the page
+    // figure out wich form is on the page
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
 
@@ -15,14 +15,14 @@ document.addEventListener('DOMContentLoaded', () => {
         initRegisterForm(registerForm);
     }
 
-    // Password visibility toggles
+    // password vizibility toggles
     initPasswordToggles();
 });
 
-/* ---------- Validation Helpers ---------- */
+/* ---------- validaton helpers ---------- */
 
 /**
- * Validates an email address format.
+ * cheks basic email format
  * @param {string} email
  * @returns {boolean}
  */
@@ -32,10 +32,10 @@ function isValidEmail(email) {
 }
 
 /**
- * Shows an error message on a form field.
- * @param {HTMLElement} input - The input element
- * @param {string} errorId - The ID of the error <p> element
- * @param {string} message - Error message to display
+ * shows err msg on a field
+ * @param {HTMLElement} input the input elem
+ * @param {string} errorId id of the error p elem
+ * @param {string} message text to show
  */
 function showError(input, errorId, message) {
     const errorEl = document.getElementById(errorId);
@@ -45,9 +45,9 @@ function showError(input, errorId, message) {
 }
 
 /**
- * Clears the error message on a form field.
- * @param {HTMLElement} input - The input element
- * @param {string} errorId - The ID of the error <p> element
+ * clears err msg on a field
+ * @param {HTMLElement} input the input elem
+ * @param {string} errorId id of the error p elem
  */
 function clearError(input, errorId) {
     const errorEl = document.getElementById(errorId);
@@ -56,62 +56,66 @@ function clearError(input, errorId) {
     errorEl.classList.remove('visible');
 }
 
-/* ---------- Login Form ---------- */
+/* ---------- login form ---------- */
 
 function initLoginForm(form) {
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
 
-    // Real-time validation on blur
+    // realtime validaton on blurr
     emailInput.addEventListener('blur', () => validateLoginEmail(emailInput));
     passwordInput.addEventListener('blur', () => validateLoginPassword(passwordInput));
 
-    // Clear errors on focus
+    // clear erors on focus
     emailInput.addEventListener('focus', () => clearError(emailInput, 'emailError'));
     passwordInput.addEventListener('focus', () => clearError(passwordInput, 'passwordError'));
 
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         const isEmailValid = validateLoginEmail(emailInput);
         const isPasswordValid = validateLoginPassword(passwordInput);
 
-        if (isEmailValid && isPasswordValid) {
-            // Mock login — store user in localStorage
-            const mockUser = {
-                name: 'Demo User',
-                email: emailInput.value.trim(),
-                role: 'user',
-                loggedIn: true
-            };
+        if (!isEmailValid || !isPasswordValid) {
+            return;
+        }
 
-            // Check if a registered user exists in localStorage
-            const storedUsers = JSON.parse(localStorage.getItem('qs_users') || '[]');
-            const matchedUser = storedUsers.find(
-                u => u.email === emailInput.value.trim()
-            );
+        try {
+            const response = await fetch('http://localhost:3000/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: emailInput.value.trim(),
+                    password: passwordInput.value
+                })
+            });
 
-            if (matchedUser) {
-                // Check password match
-                if (matchedUser.password !== passwordInput.value) {
-                    showError(passwordInput, 'passwordError', 'Incorrect password. Please try again.');
-                    return;
+            const result = await response.json();
+
+            if (response.ok && result.user) {
+                const currentUser = {
+                    name: result.user.name,
+                    email: result.user.email,
+                    role: result.user.role,
+                    loggedIn: true
+                };
+                localStorage.setItem('qs_currentUser', JSON.stringify(currentUser));
+
+                if (currentUser.role === 'admin') {
+                    window.location.href = '/pages/admin/admin-dashboard.html?v=1';
+                } else {
+                    window.location.href = '/pages/user/user-dashboard.html?v=1';
                 }
-                mockUser.name = matchedUser.name;
-                mockUser.role = matchedUser.role;
+            } else {
+                showError(
+                    passwordInput,
+                    'passwordError',
+                    result.message || 'Invalid email or password.'
+                );
             }
-
-            localStorage.setItem('qs_currentUser', JSON.stringify(mockUser));
-
-            // Redirect based on role
-            if (mockUser.role === 'admin')
-            {
-                window.location.href = '/pages/admin/admin-dashboard.html?v=1';
-            }
-            else
-            {
-                window.location.href = '/pages/user/user-dashboard.html?v=1';
-            }
+        } catch (error) {
+            console.error('connection error:', error);
+            alert('could not connect to the backend. ensure your server is running on port 3000.');
         }
     });
 }
@@ -150,7 +154,7 @@ function validateLoginPassword(input) {
     return true;
 }
 
-/* ---------- Registration Form ---------- */
+/* ---------- registraion form ---------- */
 
 function initRegisterForm(form) {
     const fullNameInput = document.getElementById('fullName');
@@ -158,7 +162,7 @@ function initRegisterForm(form) {
     const passwordInput = document.getElementById('password');
     const confirmPasswordInput = document.getElementById('confirmPassword');
 
-    // Real-time validation on blur
+    // realtime validaton on blurr
     fullNameInput.addEventListener('blur', () => validateFullName(fullNameInput));
     emailInput.addEventListener('blur', () => validateRegEmail(emailInput));
     passwordInput.addEventListener('blur', () => validateRegPassword(passwordInput));
@@ -166,7 +170,7 @@ function initRegisterForm(form) {
         validateConfirmPassword(passwordInput, confirmPasswordInput)
     );
 
-    // Clear errors on focus
+    // clear errors on focus
     fullNameInput.addEventListener('focus', () => clearError(fullNameInput, 'fullNameError'));
     emailInput.addEventListener('focus', () => clearError(emailInput, 'emailError'));
     passwordInput.addEventListener('focus', () => clearError(passwordInput, 'passwordError'));
@@ -174,7 +178,8 @@ function initRegisterForm(form) {
         clearError(confirmPasswordInput, 'confirmPasswordError')
     );
 
-    form.addEventListener('submit', (e) => {
+    // use async for backend fetch reqest
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         const isNameValid = validateFullName(fullNameInput);
@@ -183,36 +188,47 @@ function initRegisterForm(form) {
         const isConfirmValid = validateConfirmPassword(passwordInput, confirmPasswordInput);
 
         if (isNameValid && isEmailValid && isPasswordValid && isConfirmValid) {
-            // Get selected role
+            // get selected role
             const role = document.querySelector('input[name="role"]:checked').value;
 
-            // Store user in localStorage
-            const storedUsers = JSON.parse(localStorage.getItem('qs_users') || '[]');
-
-            // Check if email already exists
-            if (storedUsers.find(u => u.email === emailInput.value.trim())) {
-                showError(emailInput, 'emailError', 'An account with this email already exists.');
-                return;
-            }
-
-            const newUser = {
+            // prepeare user data for backend
+            const userData = {
                 name: fullNameInput.value.trim(),
                 email: emailInput.value.trim(),
                 password: passwordInput.value,
-                role: role,
-                createdAt: new Date().toISOString()
+                role: role
             };
 
-            storedUsers.push(newUser);
-            localStorage.setItem('qs_users', JSON.stringify(storedUsers));
+            try {
+                // send data to the backend at port 3000
+                const response = await fetch('http://localhost:3000/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(userData)
+                });
 
-            // Show success message
-            form.style.display = 'none';
-            document.getElementById('registerFooter').style.display = 'none';
-            document.getElementById('registerSuccess').classList.add('visible');
+                const result = await response.json();
+
+                if (response.ok) {
+                    // show success msg if backend confirms registraion
+                    form.style.display = 'none';
+                    const footer = document.getElementById('registerFooter');
+                    const successMsg = document.getElementById('registerSuccess');
+                    
+                    if (footer) footer.style.display = 'none';
+                    if (successMsg) successMsg.classList.add('visible');
+                } else {
+                    // show backend error (like "user already exists")
+                    showError(emailInput, 'emailError', result.message || 'registration failed');
+                }
+            } catch (error) {
+                console.error('connection error:', error);
+                alert('could not connect to the backend. ensure your server is running on port 3000.');
+            }
         }
     });
 }
+
 
 function validateFullName(input) {
     const value = input.value.trim();
@@ -297,7 +313,7 @@ function validateConfirmPassword(passwordInput, confirmInput) {
     return true;
 }
 
-/* ---------- Password Toggle ---------- */
+/* ---------- password toggle ---------- */
 
 function initPasswordToggles() {
     const toggleButtons = document.querySelectorAll('.password-toggle');
