@@ -14,12 +14,12 @@ app.get('/api/health', (req, res) => {
 
 // import routes from  files in src/routes folder
 const authroutes = require('./src/routes/authRoutes');
-// const serviceroutes = require('./src/routes/serviceroutes');
+const serviceroutes = require('./src/routes/serviceRoutes');
 // const queueroutes = require('./src/routes/queueroutes');
 
 // link routes to endpoints
 app.use('/api/auth', authroutes);
-// app.use('/api/services', serviceroutes);
+app.use('/api/services', serviceroutes);
 // app.use('/api/queues', queueroutes);
 
 //error handling for unknown routes
@@ -37,8 +37,10 @@ app.use((err, req, res, next) => {
 });
 
 // start server
-app.listen(port, () => {
-    console.log(`server is running on http://localhost:${port}`);
-});
+if (require.main === module) {
+    app.listen(port, () => {
+        console.log(`server is running on http://localhost:${port}`);
+    });
+}
 
 module.exports = app; // exported for unit testing with supertest

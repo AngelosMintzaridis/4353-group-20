@@ -10,3 +10,6 @@ backend/.env
 .DS_Store
 Thumbs.db
 
+# test reports
+coverage/
+backend/coverage/
