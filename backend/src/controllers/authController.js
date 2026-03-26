@@ -21,7 +21,6 @@ exports.register = (req, res) => {
     const nameExists = users.some(u => u.name.toLowerCase() === name.toLowerCase());
 
     if (emailExists || nameExists) {
-        // THIS IS THE TERMINAL LOG YOU WANTED
         console.log(`[AUTH ERROR] Account cannot be created: ${email} or ${name} already exists.`);
         
         const message = emailExists ? 'An account with this email already exists.' : 'This username/name is already taken.';

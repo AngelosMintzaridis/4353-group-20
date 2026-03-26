@@ -25,7 +25,45 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('notificationsPageList')) {
         loadNotificationsPage();
     }
+    if (document.getElementById('historyPageList')) {
+        loadUserHistory();
+    }
 });
+
+//fetch and display user past queue participation 
+async function loadUserHistory() {
+    const listContainer = document.getElementById('historyPageList'); // Changed this
+    const currentUser = JSON.parse(localStorage.getItem('qs_currentUser'));
+
+    if (!currentUser || !listContainer) return;
+
+    try {
+        const response = await fetch(`${QUEUE_API}/history/${encodeURIComponent(currentUser.email)}`);
+        const historyData = await response.json();
+
+        if (historyData.length === 0) {
+            listContainer.innerHTML = '<li>No history records found.</li>';
+            return;
+        }
+
+        // Map to List Items (<li>) to match your history.html structure
+        listContainer.innerHTML = historyData.map(item => `
+            <li style="padding-bottom: var(--space-3); border-bottom: 1px solid var(--gray-200);">
+                <strong>${escapeHtml(item.serviceName)}</strong><br>
+                <span style="font-size: 0.9rem; color: var(--gray-600);">
+                    Date: ${new Date(item.joinedAt).toLocaleDateString()}<br>
+                    Status: <span class="badge ${item.status === 'Left Queue' ? 'badge-danger' : 'badge-success'}">
+                        ${escapeHtml(item.status)}
+                    </span>
+                </span>
+            </li>
+        `).reverse().join('');
+
+    } catch (error) {
+        console.error("History load error:", error);
+        listContainer.innerHTML = '<li>Error loading history.</li>';
+    }
+}
 
 
 //show users specific position in their active queue

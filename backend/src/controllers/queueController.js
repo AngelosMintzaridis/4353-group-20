@@ -1,4 +1,4 @@
-const { queues, services, queueArrivalSeq } = require('../data/memoryData');
+const { queues, services, queueArrivalSeq, history } = require('../data/memoryData');
 const {
     recordQueueJoined,
     syncNearFrontForService,
@@ -83,7 +83,7 @@ exports.getAdminQueue = (req, res) => {
     });
 };
 
-// POST /api/queues/admin/:serviceId/serve-next - remove next person in order
+// POST /api/queues/admin/:serviceId/serve-next - remove next person in order, and add to history
 exports.serveNext = (req, res) => {
     const serviceIdKey = normalizeServiceId(req.params.serviceId);
     const service = services.find(s => String(s.id) === serviceIdKey);
@@ -96,8 +96,23 @@ exports.serveNext = (req, res) => {
         return res.status(400).json({ message: 'Queue is empty' });
     }
 
+    // sort and remove person at the front
     sortQueueEntries(serviceIdKey);
     const served = queues[serviceIdKey].shift();
+
+    // history logic
+    const historyEntry = {
+        userEmail: served.userEmail,
+        userName: served.userName,
+        serviceName: service.name,
+        joinedAt: served.joinedAt,
+        completedAt: new Date().toISOString(),
+        status: 'Served'
+    };
+
+    // push to history array 
+    history.push(historyEntry);
+    console.log(`[HISTORY] User ${served.userEmail} was officially Served.`);
 
     console.log(`[ADMIN] Served next: ${served.userEmail} for service ${service.name}`);
     console.log(`[INFO] Remaining in queue: ${queues[serviceIdKey].length}`);
@@ -195,17 +210,50 @@ exports.leaveQueue = (req, res) => {
         return res.status(404).json({ message: 'Queue not found' });
     }
 
-    const initialLength = queues[serviceIdKey].length;
+    // find user data before removing (for history feature) 
+    const userToRecord = queues[serviceIdKey].find(u => u.userEmail === userEmail);
 
-    queues[serviceIdKey] = queues[serviceIdKey].filter(u => u.userEmail !== userEmail);
+    if (userToRecord) {
+        // create history entry 
+        const service = services.find(s => normalizeServiceId(s.id) === serviceIdKey);
+        
+        const historyEntry = {
+            userEmail: userToRecord.userEmail,
+            userName: userToRecord.userName,
+            serviceName: service ? service.name : 'Unknown Service',
+            joinedAt: userToRecord.joinedAt,
+            completedAt: new Date().toISOString(),
+            status: 'Left Queue'
+        };
 
-    if (queues[serviceIdKey].length < initialLength) {
+        //push to history array 
+        history.push(historyEntry);
+        console.log(`[HISTORY] Recorded session for ${userEmail}`);
+
+        //removal logic
+        queues[serviceIdKey] = queues[serviceIdKey].filter(u => u.userEmail !== userEmail);
+
         console.log(`[QUEUE] User ${userEmail} successfully removed from service ${serviceIdKey}`);
         clearNearFrontForUserOnService(userEmail, serviceIdKey);
         syncNearFrontForService(serviceIdKey);
+
         return res.json({ message: 'Left queue successfully' });
     }
+
     return res.status(404).json({ message: 'User was not found in this queue' });
+};
+
+//get user history
+exports.getUserHistory = (req, res) => {
+    const { email } = req.params;
+    
+    if (!email) {
+        return res.status(400).json({ message: 'Email parameter is required' });
+    }
+
+    const userHistory = history.filter(h => h.userEmail.toLowerCase() === email.toLowerCase());
+    
+    res.json(userHistory);
 };
 
 // GET /api/queues/status?email=user@example.com

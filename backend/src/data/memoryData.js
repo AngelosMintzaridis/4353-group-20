@@ -1,5 +1,6 @@
 //array store user objects 
 const users = [];
+const history = [];
 
 //array store services
 /**
@@ -24,6 +25,7 @@ const nearServeNotified = new Set();
 
 module.exports = {
     users,
+    history,
     services,
     queues,
     queueArrivalSeq,

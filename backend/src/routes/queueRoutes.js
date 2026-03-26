@@ -16,5 +16,6 @@ router.post(
 router.post('/join', queueController.joinQueue);
 router.post('/leave', queueController.leaveQueue);
 router.get('/status', queueController.getUserStatus);
+router.get('/history/:email', queueController.getUserHistory);
 
 module.exports = router;

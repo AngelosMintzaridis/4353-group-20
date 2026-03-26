@@ -17,18 +17,8 @@
             <h1 style="margin-bottom: var(--space-6);">Queue History</h1>
 
             <section class="card">
-                <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: var(--space-4);">
-                    <li>
-                        <strong>Driver’s License Renewal</strong><br>
-                        Date: Feb 15, 2026<br>
-                        Status: Served
-                    </li>
-
-                    <li>
-                        <strong>Vehicle Registration</strong><br>
-                        Date: Jan 20, 2026<br>
-                        Status: Cancelled
-                    </li>
+                <ul id="historyPageList" style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: var(--space-4);">
+                    <li class="text-muted">Loading your history...</li>
                 </ul>
             </section>
         </main>
@@ -36,5 +26,6 @@
 
     <script src="../../js/router.js"></script>
     <script src="../../js/nav.js"></script>
+    <script src="../../js/user.js"></script>
 </body>
 </html>
