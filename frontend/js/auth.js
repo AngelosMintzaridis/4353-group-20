@@ -101,7 +101,7 @@ function initLoginForm(form) {
                 };
                 localStorage.setItem('qs_currentUser', JSON.stringify(currentUser));
 
-                if (currentUser.role === 'admin') {
+                if (currentUser.role === 'administrator') {
                     window.location.href = 'admin/admin-dashboard.html?v=1';
                 } else {
                     window.location.href = 'user/user-dashboard.html?v=1';
