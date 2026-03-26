@@ -1,4 +1,9 @@
 const { queues, services, queueArrivalSeq } = require('../data/memoryData');
+const {
+    recordQueueJoined,
+    syncNearFrontForService,
+    clearNearFrontForUserOnService
+} = require('../services/notificationTriggers');
 
 /**
  * Higher priority value is served first; ties use earlier joinedAt, then arrivalOrder.
@@ -97,6 +102,8 @@ exports.serveNext = (req, res) => {
     console.log(`[ADMIN] Served next: ${served.userEmail} for service ${service.name}`);
     console.log(`[INFO] Remaining in queue: ${queues[serviceIdKey].length}`);
 
+    syncNearFrontForService(serviceIdKey);
+
     res.json({
         message: 'Next user served',
         served: {
@@ -163,6 +170,9 @@ exports.joinQueue = (req, res) => {
     console.log(`[QUEUE] User ${userName} (${userEmail}) is joining queue for ${service.name}`);
     console.log(`[INFO] Current queue length for ${service.name}: ${queues[serviceIdKey].length}`);
 
+    recordQueueJoined(userEmail, service, position, queues[serviceIdKey].length);
+    syncNearFrontForService(serviceIdKey);
+
     res.status(201).json({
         message: 'Joined queue successfully',
         position,
@@ -191,6 +201,8 @@ exports.leaveQueue = (req, res) => {
 
     if (queues[serviceIdKey].length < initialLength) {
         console.log(`[QUEUE] User ${userEmail} successfully removed from service ${serviceIdKey}`);
+        clearNearFrontForUserOnService(userEmail, serviceIdKey);
+        syncNearFrontForService(serviceIdKey);
         return res.json({ message: 'Left queue successfully' });
     }
     return res.status(404).json({ message: 'User was not found in this queue' });

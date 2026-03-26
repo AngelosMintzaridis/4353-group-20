@@ -16,9 +16,17 @@ const queues = {};
 // per-service monotonic counter for stable arrival tie-breaks after sort
 const queueArrivalSeq = {};
 
+// in-app notifications (no email/SMS); newest stored at front when unshifted in triggers
+const notifications = [];
+
+// keys "email|serviceId" — already notified while in top-N band (dedupe)
+const nearServeNotified = new Set();
+
 module.exports = {
     users,
     services,
     queues,
-    queueArrivalSeq
+    queueArrivalSeq,
+    notifications,
+    nearServeNotified
 };

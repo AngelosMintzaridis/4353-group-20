@@ -4,21 +4,26 @@
 
 const API_BASE = 'http://localhost:3000/api/services';
 const QUEUE_API = 'http://localhost:3000/api/queues';
+const NOTIFICATION_API = 'http://localhost:3000/api/notifications';
 
 document.addEventListener('DOMContentLoaded', () => {
     // For Join Queue Page
     if (document.getElementById('availableServicesContainer')) {
         loadAvailableServices();
     }
-    
+
     // For User Dashboard Page
     if (document.getElementById('activeServicesList')) {
         renderUserDashboard();
     }
 
-    //for queue status page 
+    // for queue status page
     if (document.getElementById('queueStatusContainer')) {
         renderUserStatus();
+    }
+
+    if (document.getElementById('notificationsPageList')) {
+        loadNotificationsPage();
     }
 });
 
@@ -125,19 +130,18 @@ async function loadAvailableServices() {
 
 
 
-//populate userdasboard with realtime status and serivces instead of temp data
+// populate user dashboard with realtime status and services
 async function renderUserDashboard() {
     const statusContainer = document.getElementById('userStatusSummary');
     const servicesList = document.getElementById('activeServicesList');
-    const currentUser = JSON.parse(localStorage.getItem('qs_currentUser'));
+    const currentUser = JSON.parse(localStorage.getItem('qs_currentUser') || 'null');
 
     try {
-        //fetch available services
         const sResponse = await fetch(API_BASE);
         const services = await sResponse.json();
 
-        servicesList.innerHTML = services.length === 0 
-            ? '<p>No services currently open.</p>' 
+        servicesList.innerHTML = services.length === 0
+            ? '<p>No services currently open.</p>'
             : services.map(s => `
                 <div style="padding: var(--space-4); border: 1px solid var(--gray-200); border-radius: var(--radius-md);">
                     <h3>${escapeHtml(s.name)}</h3>
@@ -146,8 +150,16 @@ async function renderUserDashboard() {
                 </div>
             `).join('');
 
-        // fetch user status from backnd
-        const qResponse = await fetch(`${QUEUE_API}/status?email=${currentUser.email}`);
+        if (!currentUser) {
+            statusContainer.innerHTML =
+                '<p>Please log in to see your queue status.</p>';
+            await renderNotificationsSummary();
+            return;
+        }
+
+        const qResponse = await fetch(
+            `${QUEUE_API}/status?email=${encodeURIComponent(currentUser.email)}`
+        );
         const status = await qResponse.json();
 
         if (status.inQueue) {
@@ -166,8 +178,135 @@ async function renderUserDashboard() {
                 <a href="join-queue.html" class="btn btn-primary btn-sm" style="margin-top: 10px; display: inline-block;">Join a Queue</a>
             `;
         }
+
+        await renderNotificationsSummary();
     } catch (error) {
-        console.error("Dashboard error:", error);
+        console.error('Dashboard error:', error);
+    }
+}
+
+async function renderNotificationsSummary() {
+    const ul = document.getElementById('notificationsList');
+    if (!ul) return;
+
+    const currentUser = JSON.parse(localStorage.getItem('qs_currentUser') || 'null');
+    if (!currentUser) {
+        ul.innerHTML =
+            '<li style="padding: var(--space-3); background: var(--gray-100); border-radius: var(--radius-md);">Log in to see notifications from the server.</li>';
+        return;
+    }
+
+    try {
+        const res = await fetch(
+            `${NOTIFICATION_API}?email=${encodeURIComponent(currentUser.email)}`
+        );
+        if (!res.ok) throw new Error('bad response');
+        const data = await res.json();
+        const items = data.notifications || [];
+
+        if (items.length === 0) {
+            ul.innerHTML =
+                '<li style="padding: var(--space-3); background: var(--gray-100); border-radius: var(--radius-md);">No notifications yet. Join a queue to receive updates.</li>';
+            return;
+        }
+
+        const preview = items.slice(0, 5);
+        ul.innerHTML = preview
+            .map(
+                n => `
+            <li style="padding: var(--space-3); background: var(--gray-100); border-radius: var(--radius-md);">
+                <span class="badge" style="margin-right: var(--space-2);">${escapeHtml(
+                    formatNotificationType(n.type)
+                )}</span>
+                ${n.read ? '' : '<strong>New · </strong>'}
+                ${escapeHtml(n.message)}
+                <div style="font-size: 0.85rem; color: var(--gray-600); margin-top: var(--space-2);">${new Date(
+                    n.createdAt
+                ).toLocaleString()}</div>
+            </li>`
+            )
+            .join('');
+
+        if (items.length > 5) {
+            ul.innerHTML += `<li style="padding: var(--space-2);"><a href="notifications.html">View all (${items.length})</a></li>`;
+        }
+    } catch (e) {
+        console.error('Notifications load error:', e);
+        ul.innerHTML =
+            '<li style="padding: var(--space-3); background: var(--gray-100); border-radius: var(--radius-md);">Could not load notifications. Is the backend running?</li>';
+    }
+}
+
+function formatNotificationType(type) {
+    if (type === 'queue_joined') return 'Joined';
+    if (type === 'close_to_serve') return 'Near front';
+    return type || 'Notice';
+}
+
+async function loadNotificationsPage() {
+    const ul = document.getElementById('notificationsPageList');
+    if (!ul) return;
+
+    const currentUser = JSON.parse(localStorage.getItem('qs_currentUser') || 'null');
+    if (!currentUser) {
+        ul.innerHTML =
+            '<li style="padding: var(--space-3); background: var(--gray-100); border-radius: var(--radius-md);">Please log in to see notifications.</li>';
+        return;
+    }
+
+    try {
+        const res = await fetch(
+            `${NOTIFICATION_API}?email=${encodeURIComponent(currentUser.email)}`
+        );
+        if (!res.ok) throw new Error('bad response');
+        const data = await res.json();
+        const items = data.notifications || [];
+
+        if (items.length === 0) {
+            ul.innerHTML =
+                '<li style="padding: var(--space-3); background: var(--gray-100); border-radius: var(--radius-md);">No notifications yet.</li>';
+            return;
+        }
+
+        ul.innerHTML = items
+            .map(
+                n => `
+            <li style="padding: var(--space-4); background: var(--gray-100); border-radius: var(--radius-md);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3);">
+                    <div>
+                        <span class="badge">${escapeHtml(formatNotificationType(n.type))}</span>
+                        ${n.read ? '' : ' <span class="badge badge-warning">Unread</span>'}
+                        <p style="margin: var(--space-2) 0 0;">${escapeHtml(n.message)}</p>
+                        <div style="font-size: 0.85rem; color: var(--gray-600); margin-top: var(--space-2);">${new Date(
+                n.createdAt
+            ).toLocaleString()}</div>
+                    </div>
+                    <button type="button" class="btn btn-outline btn-sm" data-mark-read="${n.id}">Mark read</button>
+                </div>
+            </li>`
+            )
+            .join('');
+
+        ul.querySelectorAll('[data-mark-read]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = btn.getAttribute('data-mark-read');
+                try {
+                    const r = await fetch(
+                        `${NOTIFICATION_API}/${id}/read?email=${encodeURIComponent(
+                            currentUser.email
+                        )}`,
+                        { method: 'PATCH' }
+                    );
+                    if (r.ok) loadNotificationsPage();
+                } catch (err) {
+                    console.error(err);
+                }
+            });
+        });
+    } catch (e) {
+        console.error(e);
+        ul.innerHTML =
+            '<li style="padding: var(--space-3);">Could not load notifications.</li>';
     }
 }
 
@@ -258,4 +397,25 @@ function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+}
+
+function showNotification(message, type) {
+    let container = document.getElementById('toastContainerUser');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainerUser';
+        container.style.cssText =
+            'position:fixed;bottom:20px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:8px;';
+        document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    toast.style.cssText =
+        'padding:12px 16px;border-radius:8px;color:#fff;max-width:280px;box-shadow:0 4px 12px rgba(0,0,0,.15);';
+    toast.style.background =
+        type === 'error' ? '#c0392b' : type === 'success' ? '#27ae60' : '#2c3e50';
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.remove();
+    }, 3200);
 }
