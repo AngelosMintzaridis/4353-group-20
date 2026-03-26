@@ -32,22 +32,22 @@ function renderNav(container) {
     }
 
     const userInitials = getInitials(user.name);
-    const isAdmin = user.role === 'admin';
+    const isAdmin = user.role.toLowerCase() === 'administrator';
     const currentPage = getCurrentPage();
 
     // Build nav links based on role
     const userLinks = [
-        { href: 'user-dashboard.html', icon: iconDashboard(), label: 'Dashboard' },
-        { href: 'join-queue.html', icon: iconJoinQueue(), label: 'Join Queue' },
-        { href: 'queue-status.html', icon: iconQueueStatus(), label: 'Queue Status' },
-        { href: 'history.html', icon: iconHistory(), label: 'History' },
-        { href: 'notifications.html', icon: iconNotifications(), label: 'Notifications' },
+        { href: '/frontend/pages/user/user-dashboard.html', icon: iconDashboard(), label: 'Dashboard' },
+        { href: '/frontend/pages/user/join-queue.html', icon: iconJoinQueue(), label: 'Join Queue' },
+        { href: '/frontend/pages/user/queue-status.html', icon: iconQueueStatus(), label: 'Queue Status' },
+        { href: '/frontend/pages/user/history.html', icon: iconHistory(), label: 'History' },
+        { href: '/frontend/pages/user/notifications.html', icon: iconNotifications(), label: 'Notifications' },
     ];
     const adminLinks = [
-        { href: 'admin-dashboard.html', icon: iconDashboard(), label: 'Dashboard' },
-        { href: 'services.html', icon: iconServices(), label: 'Services' },
-        { href: 'queue-manage.html', icon: iconQueueManage(), label: 'Queue Management' },
-        { href: 'history.html', icon: iconHistory(), label: 'Usage Statistics' },
+        { href: '/frontend/pages/admin/admin-dashboard.html', icon: iconDashboard(), label: 'Dashboard' },
+        { href: '/frontend/pages/admin/services.html', icon: iconServices(), label: 'Services' },
+        { href: '/frontend/pages/admin/queue-manage.html', icon: iconQueueManage(), label: 'Queue Management' },
+        { href: '/frontend/pages/admin/history.html', icon: iconHistory(), label: 'Usage Statistics' },
     ];
 
     const links = isAdmin ? adminLinks : userLinks;
@@ -97,7 +97,7 @@ function renderNav(container) {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
             localStorage.removeItem('qs_currentUser');
-            window.location.href = '../login.html';
+            window.location.href = '/frontend/pages/login.html';
         });
     }
 }
