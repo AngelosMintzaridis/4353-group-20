@@ -11,37 +11,51 @@ export function setupServiceFormValidation() {
   const duration = document.getElementById("serviceDuration");
   const priority = document.getElementById("servicePriority");
 
-  form.addEventListener("submit", (e) => {
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     [name, desc, duration, priority].forEach(clearError);
 
     let ok = true;
 
-    // Required + max length limit
-    const n = name.value.trim();
-    if (!n) { showError(name, "Service name is required."); ok = false; }
-    else if (n.length > 100) { showError(name, "Max 100 characters."); ok = false; }
-
-    // Required
-    if (!desc.value.trim()) { showError(desc, "Description is required."); ok = false; }
-
-    // Required + number
-    const mins = Number(duration.value);
-    if (!duration.value.trim() || Number.isNaN(mins) || mins <= 0) {
-      showError(duration, "Duration must be a positive number.");
-      ok = false;
-    }
-
-    // Required select
-    if (!priority.value) { showError(priority, "Priority is required."); ok = false; }
+    // ... (Keep your existing validation logic here)
 
     if (!ok) {
-      notify("Fix the highlighted fields.", "warning");
-      return;
+        notify("Fix the highlighted fields.", "warning");
+        return;
     }
 
-    notify("Service saved (mock).", "success");
-    form.reset();
-  });
+    // Prepare data for the backend
+    const serviceData = {
+        name: name.value.trim(),
+        description: desc.value.trim(),
+        expectedDuration: Number(duration.value),
+        priorityLevel: Number(priority.value)
+    };
+
+    try {
+        const response = await fetch('http://localhost:3000/api/services', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(serviceData)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            notify("Service created successfully!", "success");
+            form.reset();
+            // Close modal logic here if applicable
+            document.getElementById("serviceModal").classList.remove("active"); 
+            // Refresh the list
+            loadServices(); 
+        } else {
+            notify(result.message || "Failed to save service.", "error");
+        }
+    } catch (error) {
+        console.error("Error saving service:", error);
+        notify("Could not connect to server.", "error");
+    }
+});
+
 }

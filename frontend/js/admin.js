@@ -84,43 +84,40 @@ function initAdminDashboard() {
     renderDashboard();
 }
 
-function renderDashboard() {
-    const services = getServices();
-    const queues = getQueues();
+async function renderDashboard() {
+    try {
+        const response = await fetch(API_BASE); 
+        const services = await response.json(); 
+        const queues = getQueues(); 
 
-    const totalServices = services.length;
-    const activeQueues = services.filter(s => s.status === 'open').length;
-    const totalWaiting = Object.values(queues).reduce((sum, q) => sum + q.length, 0);
+        const totalServices = services.length;
+        
+        const activeQueues = services.length; 
+        const totalWaiting = Object.values(queues).reduce((sum, q) => sum + q.length, 0);
 
-    document.getElementById('statTotalServices').textContent = totalServices;
-    document.getElementById('statActiveQueues').textContent = activeQueues;
-    document.getElementById('statUsersWaiting').textContent = totalWaiting;
+        document.getElementById('statTotalServices').textContent = totalServices;
+        document.getElementById('statActiveQueues').textContent = activeQueues;
+        document.getElementById('statUsersWaiting').textContent = totalWaiting;
 
-    const tableContainer = document.getElementById('dashboardServicesTable');
 
-    if (services.length === 0) {
-        tableContainer.innerHTML = '<div class="empty-state"><p>No services configured yet.</p></div>';
-        return;
+        renderDashboardTable(services, queues); 
+    } catch (error) {
+        console.error("Dashboard sync error:", error);
     }
+}
+
+function renderDashboardTable(services, queues) {
+    const tableContainer = document.getElementById('dashboardServicesTable');
+    if (!tableContainer) return;
 
     const rows = services.map(service => {
         const queueLength = (queues[service.id] || []).length;
-        const statusBadge = service.status === 'open'
-            ? '<span class="badge badge-success">Open</span>'
-            : '<span class="badge badge-error">Closed</span>';
-        const toggleLabel = service.status === 'open' ? 'Close Queue' : 'Open Queue';
-        const toggleClass = service.status === 'open' ? 'btn-outline btn-sm' : 'btn-success btn-sm';
-
         return `
             <tr>
                 <td><strong>${escapeHtml(service.name)}</strong></td>
-                <td>${queueLength} ${queueLength === 1 ? 'person' : 'people'}</td>
-                <td>${statusBadge}</td>
-                <td>
-                    <button class="btn ${toggleClass}" data-toggle-service="${service.id}">
-                        ${toggleLabel}
-                    </button>
-                </td>
+                <td>${service.expectedDuration} mins</td>
+                <td><span class="badge">${service.priorityLevel}</span></td>
+                <td>${queueLength} people waiting</td>
             </tr>
         `;
     }).join('');
@@ -130,20 +127,14 @@ function renderDashboard() {
             <thead>
                 <tr>
                     <th>Service</th>
-                    <th>Queue Length</th>
-                    <th>Status</th>
-                    <th>Action</th>
+                    <th>Duration</th>
+                    <th>Priority</th>
+                    <th>Queue Status</th>
                 </tr>
             </thead>
             <tbody>${rows}</tbody>
         </table>
     `;
-
-    tableContainer.querySelectorAll('[data-toggle-service]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            toggleServiceStatus(parseInt(btn.dataset.toggleService, 10));
-        });
-    });
 }
 
 function toggleServiceStatus(serviceId) {
@@ -161,129 +152,140 @@ function toggleServiceStatus(serviceId) {
 
 /* ================================================
    Service Management
-   ================================================ */
+   =============================================== */
 
 let editingServiceId = null;
+const API_BASE = 'http://localhost:3000/api/services';
 
 function initServiceManagement() {
-    renderServicesList();
+    renderServicesList(); // Initial load from backend
 
     document.getElementById('addServiceBtn').addEventListener('click', () => openServiceModal());
     document.getElementById('closeModalBtn').addEventListener('click', closeServiceModal);
     document.getElementById('cancelServiceBtn').addEventListener('click', closeServiceModal);
 
-    const form = document.getElementById('serviceForm');
-    const nameInput = document.getElementById('serviceName');
-    const descInput = document.getElementById('serviceDescription');
-    const durationInput = document.getElementById('serviceDuration');
-    const priorityInput = document.getElementById('servicePriority');
-
-    nameInput.addEventListener('blur', () => validateServiceName(nameInput));
-    descInput.addEventListener('blur', () => validateServiceDescription(descInput));
-    durationInput.addEventListener('blur', () => validateServiceDuration(durationInput));
-    priorityInput.addEventListener('blur', () => validateServicePriority(priorityInput));
-
-    nameInput.addEventListener('focus', () => clearFieldError(nameInput, 'serviceNameError'));
-    descInput.addEventListener('focus', () => clearFieldError(descInput, 'serviceDescriptionError'));
-    durationInput.addEventListener('focus', () => clearFieldError(durationInput, 'serviceDurationError'));
-    priorityInput.addEventListener('focus', () => clearFieldError(priorityInput, 'servicePriorityError'));
-
-    form.addEventListener('submit', handleServiceSubmit);
-
-    document.getElementById('serviceModal').addEventListener('click', (e) => {
-        if (e.target.id === 'serviceModal') closeServiceModal();
-    });
+    document.getElementById('serviceForm').addEventListener('submit', handleServiceSubmit);
 }
 
-function renderServicesList() {
-    const services = getServices();
-    const queues = getQueues();
+/**
+ * FETCH: List all services from the backend
+ */
+async function renderServicesList() {
     const container = document.getElementById('servicesListContainer');
+    
+    try {
+        const response = await fetch(API_BASE);
+        const services = await response.json();
 
-    if (services.length === 0) {
-        container.innerHTML = '<div class="empty-state"><p>No services yet. Click "Add Service" to create one.</p></div>';
-        return;
-    }
+        if (services.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>No services yet. Click "Add Service" to create one.</p></div>';
+            return;
+        }
 
-    const rows = services.map(service => {
-        const priorityBadge = getPriorityBadge(service.priority);
-        const statusBadge = service.status === 'open'
-            ? '<span class="badge badge-success">Open</span>'
-            : '<span class="badge badge-error">Closed</span>';
-
-        return `
+        const rows = services.map(service => `
             <tr>
                 <td><strong>${escapeHtml(service.name)}</strong></td>
                 <td class="desc-cell">${escapeHtml(service.description)}</td>
-                <td>${service.duration} min</td>
-                <td>${priorityBadge}</td>
-                <td>${statusBadge}</td>
+                <td>${service.expectedDuration} min</td>
+                <td><span class="badge">${service.priorityLevel}</span></td>
                 <td>
                     <div style="display: flex; gap: var(--space-2);">
-                        <button class="btn btn-outline btn-sm" data-edit-service="${service.id}">Edit</button>
-                        <button class="btn btn-danger btn-sm" data-delete-service="${service.id}">Delete</button>
+                        <button class="btn btn-outline btn-sm" onclick="openServiceModal(${service.id})">Edit</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteService(${service.id})">Delete</button>
                     </div>
                 </td>
             </tr>
+        `).join('');
+
+        container.innerHTML = `
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Duration</th>
+                        <th>Priority</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
         `;
-    }).join('');
-
-    container.innerHTML = `
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Description</th>
-                    <th>Duration</th>
-                    <th>Priority</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-        </table>
-    `;
-
-    container.querySelectorAll('[data-edit-service]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            openServiceModal(parseInt(btn.dataset.editService, 10));
-        });
-    });
-
-    container.querySelectorAll('[data-delete-service]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            deleteService(parseInt(btn.dataset.deleteService, 10));
-        });
-    });
+    } catch (error) {
+        showNotification('Failed to load services from server.', 'error');
+    }
 }
 
-function getPriorityBadge(priority) {
-    const map = {
-        high: '<span class="badge badge-error">High</span>',
-        medium: '<span class="badge badge-warning">Medium</span>',
-        low: '<span class="badge badge-success">Low</span>',
+/**
+ * FETCH: Create or Update a service
+ */
+async function handleServiceSubmit(e) {
+    e.preventDefault();
+
+    const serviceData = {
+        name: document.getElementById('serviceName').value.trim(),
+        description: document.getElementById('serviceDescription').value.trim(),
+        expectedDuration: Number(document.getElementById('serviceDuration').value),
+        priorityLevel: Number(document.getElementById('servicePriority').value)
     };
-    return map[priority] || priority;
+
+    const url = editingServiceId ? `${API_BASE}/${editingServiceId}` : API_BASE;
+    const method = editingServiceId ? 'PUT' : 'POST';
+
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(serviceData)
+        });
+
+        if (response.ok) {
+            showNotification(editingServiceId ? 'Service updated!' : 'Service created!', 'success');
+            closeServiceModal();
+            renderServicesList(); // Refresh list
+        }
+    } catch (error) {
+        showNotification('Error saving service.', 'error');
+    }
 }
 
-function openServiceModal(serviceId) {
-    editingServiceId = serviceId || null;
+/**
+ * FETCH: Delete a service
+ */
+async function deleteService(id) {
+    if (!confirm('Are you sure you want to delete this service?')) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+        if (response.ok) {
+            showNotification('Service removed.', 'info');
+            renderServicesList();
+        }
+    } catch (error) {
+        showNotification('Could not delete service.', 'error');
+    }
+}
+
+async function openServiceModal(id) {
+    editingServiceId = id || null;
     const modal = document.getElementById('serviceModal');
     const title = document.getElementById('serviceModalTitle');
     const form = document.getElementById('serviceForm');
 
     form.reset();
-    clearAllServiceErrors();
-
+    
     if (editingServiceId) {
         title.textContent = 'Edit Service';
-        const services = getServices();
-        const service = services.find(s => s.id === editingServiceId);
+        // Fetch specific service data to populate form
+        const response = await fetch(`${API_BASE}`);
+        const services = await response.json();
+        const service = services.find(s => s.id === id);
+        
         if (service) {
             document.getElementById('serviceName').value = service.name;
             document.getElementById('serviceDescription').value = service.description;
-            document.getElementById('serviceDuration').value = service.duration;
-            document.getElementById('servicePriority').value = service.priority;
+            document.getElementById('serviceDuration').value = service.expectedDuration;
+            document.getElementById('servicePriority').value = service.priorityLevel;
         }
     } else {
         title.textContent = 'Create Service';
@@ -297,146 +299,7 @@ function closeServiceModal() {
     editingServiceId = null;
 }
 
-function handleServiceSubmit(e) {
-    e.preventDefault();
 
-    const nameInput = document.getElementById('serviceName');
-    const descInput = document.getElementById('serviceDescription');
-    const durationInput = document.getElementById('serviceDuration');
-    const priorityInput = document.getElementById('servicePriority');
-
-    const isNameValid = validateServiceName(nameInput);
-    const isDescValid = validateServiceDescription(descInput);
-    const isDurationValid = validateServiceDuration(durationInput);
-    const isPriorityValid = validateServicePriority(priorityInput);
-
-    if (!isNameValid || !isDescValid || !isDurationValid || !isPriorityValid) return;
-
-    const services = getServices();
-    const queues = getQueues();
-
-    if (editingServiceId) {
-        const service = services.find(s => s.id === editingServiceId);
-        if (service) {
-            service.name = nameInput.value.trim();
-            service.description = descInput.value.trim();
-            service.duration = parseInt(durationInput.value, 10);
-            service.priority = priorityInput.value;
-        }
-        showNotification('Service updated successfully.', 'success');
-    } else {
-        const newId = services.length > 0 ? Math.max(...services.map(s => s.id)) + 1 : 1;
-        const newService = {
-            id: newId,
-            name: nameInput.value.trim(),
-            description: descInput.value.trim(),
-            duration: parseInt(durationInput.value, 10),
-            priority: priorityInput.value,
-            status: 'open',
-        };
-        services.push(newService);
-        queues[newId] = [];
-        saveQueues(queues);
-        showNotification('Service created successfully.', 'success');
-    }
-
-    saveServices(services);
-    closeServiceModal();
-    renderServicesList();
-}
-
-function deleteService(serviceId) {
-    if (!confirm('Are you sure you want to delete this service? This action cannot be undone.')) return;
-
-    const services = getServices().filter(s => s.id !== serviceId);
-    saveServices(services);
-
-    const queues = getQueues();
-    delete queues[serviceId];
-    saveQueues(queues);
-
-    renderServicesList();
-    showNotification('Service deleted.', 'info');
-}
-
-function clearAllServiceErrors() {
-    ['serviceName', 'serviceDescription', 'serviceDuration', 'servicePriority'].forEach(id => {
-        const input = document.getElementById(id);
-        if (input) {
-            input.classList.remove('error');
-            const errorEl = document.getElementById(id + 'Error');
-            if (errorEl) {
-                errorEl.textContent = '';
-                errorEl.classList.remove('visible');
-            }
-        }
-    });
-}
-
-/* ---------- Service Validations ---------- */
-
-function validateServiceName(input) {
-    const value = input.value.trim();
-
-    if (!value) {
-        showFieldError(input, 'serviceNameError', 'Service name is required.');
-        return false;
-    }
-
-    if (value.length > 100) {
-        showFieldError(input, 'serviceNameError', 'Name must be 100 characters or fewer.');
-        return false;
-    }
-
-    clearFieldError(input, 'serviceNameError');
-    return true;
-}
-
-function validateServiceDescription(input) {
-    const value = input.value.trim();
-
-    if (!value) {
-        showFieldError(input, 'serviceDescriptionError', 'Description is required.');
-        return false;
-    }
-
-    clearFieldError(input, 'serviceDescriptionError');
-    return true;
-}
-
-function validateServiceDuration(input) {
-    const value = input.value;
-
-    if (!value) {
-        showFieldError(input, 'serviceDurationError', 'Duration is required.');
-        return false;
-    }
-
-    const num = parseInt(value, 10);
-
-    if (isNaN(num) || num < 1) {
-        showFieldError(input, 'serviceDurationError', 'Duration must be at least 1 minute.');
-        return false;
-    }
-
-    if (num > 480) {
-        showFieldError(input, 'serviceDurationError', 'Duration cannot exceed 480 minutes (8 hours).');
-        return false;
-    }
-
-    clearFieldError(input, 'serviceDurationError');
-    return true;
-}
-
-function validateServicePriority(input) {
-    if (!input.value) {
-        showFieldError(input, 'servicePriorityError', 'Please select a priority level.');
-        return false;
-    }
-
-    clearFieldError(input, 'servicePriorityError');
-    return true;
-}
 
 /* ================================================
    Queue Management
@@ -462,14 +325,19 @@ function initQueueManagement() {
     document.getElementById('serveNextBtn').addEventListener('click', serveNextUser);
 }
 
-function populateServiceSelect(select) {
-    const services = getServices();
-    const options = services
-        .filter(s => s.status === 'open')
-        .map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`)
-        .join('');
+async function populateServiceSelect(select) {
+    try {
+        const response = await fetch(API_BASE); //
+        const services = await response.json(); //
 
-    select.innerHTML = '<option value="">Choose a service...</option>' + options;
+        const options = services
+            .map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`)
+            .join('');
+
+        select.innerHTML = '<option value="">Choose a service...</option>' + options;
+    } catch (error) {
+        console.error("Select population error:", error);
+    }
 }
 
 function renderQueue() {
@@ -483,7 +351,7 @@ function renderQueue() {
     document.getElementById('queueServiceTitle').textContent =
         service ? service.name + ' \u2014 Queue' : 'Queue';
 
-    const estPerPerson = service ? service.duration : 10;
+    const estPerPerson = service ? service.expectedDuration : 10;
     const statsEl = document.getElementById('queueStats');
     statsEl.innerHTML = `
         <div class="stats-grid">
