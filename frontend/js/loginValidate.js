@@ -35,7 +35,7 @@ export function setupLoginValidation() {
     }
 
     notify("Login valid (mock).", "success");
-    // redirect (optional)
-    // window.location.href = "./user/dashboard.html";
+    //redir
+    window.location.href = "user/user-dashboard.html";
   });
 }
