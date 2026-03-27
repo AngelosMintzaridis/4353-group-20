@@ -8,8 +8,23 @@
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    background: var(--gray-100);
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #0f172a 100%);
     padding: var(--space-4);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Subtle radial glow behind the card */
+.auth-wrapper::before {
+    content: '';
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
 }
 
 /* ---------- Auth Card ---------- */
@@ -18,8 +33,11 @@
     max-width: 420px;
     background: #fff;
     border-radius: var(--radius-lg);
-    border: 1px solid var(--gray-200);
+    border: none;
     padding: var(--space-8);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    position: relative;
+    z-index: 1;
 }
 
 /* ---------- Auth Header ---------- */
@@ -28,7 +46,59 @@
     margin-bottom: var(--space-6);
 }
 
+/* ---------- QueueSmart Logo ---------- */
+.queuesmart-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: var(--space-4);
+}
 
+.icon-q {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    border: 4.5px solid #0f172a;
+    border-radius: 50%;
+    box-sizing: border-box;
+}
+
+/* Queue dots inside the circle — 3 people waiting */
+.icon-q::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 4px;
+    height: 4px;
+    background: #0f172a;
+    border-radius: 50%;
+    box-shadow:
+        -7px 0 0 0 #0f172a,
+        7px 0 0 0 #0f172a;
+}
+
+/* Arrow tail — flow out of the queue */
+.icon-q::after {
+    content: "";
+    position: absolute;
+    bottom: -2px;
+    right: -4px;
+    width: 14px;
+    height: 4.5px;
+    background: #0f172a;
+    transform: rotate(45deg);
+    border-radius: 2px;
+}
+
+.logo-text {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-weight: 700;
+    font-size: 1.45rem;
+    color: #0f172a;
+    letter-spacing: -0.5px;
+}
 
 .auth-header h1 {
     font-size: var(--font-size-xl);

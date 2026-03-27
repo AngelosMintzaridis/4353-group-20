@@ -10,7 +10,7 @@ A web application that helps organizations manage queues and appointments effici
    cd 4353-group-20
    ```
 
-2. Backend Setup (The "Brain")
+2. Backend Setup
 ### Navigate to the backend directory
    ```bash
    cd backend
@@ -31,8 +31,6 @@ A web application that helps organizations manage queues and appointments effici
 
 3. Frontend Setup 
 
-   ```bash
-   ```
    - Use the commands:
      ```bash
      # Using Python
