@@ -102,9 +102,9 @@ function initLoginForm(form) {
                 localStorage.setItem('qs_currentUser', JSON.stringify(currentUser));
 
                 if (currentUser.role === 'administrator') {
-                    window.location.href = 'admin/admin-dashboard.html?v=1';
+                    window.location.href = '/frontend/pages/admin/admin-dashboard.html?v=1';
                 } else {
-                    window.location.href = 'user/user-dashboard.html?v=1';
+                    window.location.href = '/frontend/pages/user/user-dashboard.html?v=1';
                 }
             } else {
                 showError(
@@ -214,7 +214,7 @@ function initRegisterForm(form) {
                     form.style.display = 'none';
                     const footer = document.getElementById('registerFooter');
                     const successMsg = document.getElementById('registerSuccess');
-                    
+
                     if (footer) footer.style.display = 'none';
                     if (successMsg) successMsg.classList.add('visible');
                 } else {

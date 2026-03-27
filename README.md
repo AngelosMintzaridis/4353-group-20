@@ -30,9 +30,8 @@ A web application that helps organizations manage queues and appointments effici
 
 
 3. Frontend Setup 
-### Navigate to the frontend directory
+
    ```bash
-   cd frontend
    ```
    - Use the commands:
      ```bash

@@ -29,7 +29,7 @@
     const user = getLoggedInUser();
 
     if (!user || !user.loggedIn) {
-        window.location.href = 'login.html';
+        window.location.href = '/frontend/pages/login.html';
         return;
     }
 

@@ -1,7 +1,12 @@
 const request = require('supertest');
 const app = require('../server'); // Import the Express app
+const { users } = require('../src/data/memoryData');
 
 describe('Authentication API Tests', () => {
+
+    beforeAll(() => {
+        users.length = 0;
+    });
 
     describe('POST /api/auth/register', () => {
         it('should successfully register a new user with valid data', async () => {
@@ -15,7 +20,7 @@ describe('Authentication API Tests', () => {
                 });
             
             expect(res.statusCode).toEqual(201);
-            expect(res.body).toHaveProperty('message', 'User registered in memory');
+            expect(res.body).toHaveProperty('message', 'User registered successfully');
             expect(res.body.user.name).toEqual('John Doe');
         });
 

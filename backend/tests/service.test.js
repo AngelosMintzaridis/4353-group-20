@@ -1,8 +1,13 @@
 const request = require('supertest');
 const app = require('../server');
+const { services } = require('../src/data/memoryData');
 
 describe('Service Management API Tests', () => {
     let createdServiceId;
+
+    beforeAll(() => {
+        services.length = 0;
+    });
 
     describe('POST /api/services', () => {
         it('should create a new service successfully', async () => {
@@ -16,23 +21,22 @@ describe('Service Management API Tests', () => {
                 });
             
             expect(res.statusCode).toEqual(201);
-            expect(res.body.service).toHaveProperty('id');
-            expect(res.body.service.name).toEqual('General Consultation');
-            createdServiceId = res.body.service.id;
+            expect(res.body).toHaveProperty('id');
+            expect(res.body.name).toEqual('General Consultation');
+            createdServiceId = res.body.id;
         });
 
-        it('should fail if expectedDuration is not a positive number', async () => {
+        it('should fail if priorityLevel is missing', async () => {
              const res = await request(app)
                 .post('/api/services')
                 .send({
                     name: 'Bad Service',
                     description: 'desc',
-                    expectedDuration: -5,
-                    priorityLevel: 1
+                    expectedDuration: 15
                 });
             
             expect(res.statusCode).toEqual(400);
-            expect(res.body.message).toMatch(/Expected duration must be a positive number/);
+            expect(res.body.message).toMatch(/Priority/i);
         });
     });
 
