@@ -38,7 +38,6 @@ async function loadUserHistory() {
     if (!currentUser || !listContainer) return;
 
     try {
-        // fetching from the new history endpoint connected to mongodb
         const response = await fetch(`${QUEUE_API}/history/${encodeURIComponent(currentUser.email)}`);
         const historyData = await response.json();
 
@@ -47,7 +46,6 @@ async function loadUserHistory() {
             return;
         }
 
-        // map to list items using database fields
         listContainer.innerHTML = historyData.map(item => `
             <li style="padding-bottom: var(--space-3); border-bottom: 1px solid var(--gray-200);">
                 <strong>${escapeHtml(item.message || "Service Session")}</strong><br>
@@ -88,6 +86,8 @@ async function renderUserStatus() {
         }
 
         const waitTime = status.estimatedWaitMinutes;
+        // Use MongoDB _id for the leaveQueue call
+        const serviceId = status.service._id || status.service.id;
 
         container.innerHTML = `
             <section class="card">
@@ -97,7 +97,7 @@ async function renderUserStatus() {
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
                     <span class="badge badge-warning">Waiting</span>
-                    <button class="btn btn-danger btn-sm" onclick="leaveQueue('${status.service._id || status.service.id}')">Leave Queue</button>
+                    <button class="btn btn-danger btn-sm" onclick="leaveQueue('${serviceId}')">Leave Queue</button>
                 </div>
             </section>
         `;
@@ -130,7 +130,6 @@ async function loadAvailableServices() {
         }
 
         container.innerHTML = services.map(service => {
-            // handle mongodb _id comparison
             const serviceId = service._id || service.id;
             const activeServiceId = userStatus.inQueue ? (userStatus.service._id || userStatus.service.id) : null;
             const isJoined = userStatus.inQueue && activeServiceId === serviceId;
@@ -164,7 +163,7 @@ async function loadAvailableServices() {
     }
 }
 
-// populate user dashboard with realtime database status
+// populate user dashboard
 async function renderUserDashboard() {
     const statusContainer = document.getElementById('userStatusSummary');
     const servicesList = document.getElementById('activeServicesList');
@@ -238,7 +237,7 @@ async function renderNotificationsSummary() {
             <li style="padding: var(--space-3); background: var(--gray-100); border-radius: var(--radius-md);">
                 ${n.status === 'sent' ? '<strong>New · </strong>' : ''}
                 ${escapeHtml(n.message)}
-                <div style="font-size: 0.85rem; color: var(--gray-600); margin-top: var(--space-2);">${new Date(n.timestamp).toLocaleString()}</div>
+                <div style="font-size: 0.85rem; color: var(--gray-600); margin-top: var(--space-2);">${new Date(n.timestamp || n.createdAt).toLocaleString()}</div>
             </li>`
         ).join('');
 
@@ -255,18 +254,11 @@ async function loadNotificationsPage() {
     if (!ul) return;
 
     const currentUser = JSON.parse(localStorage.getItem('qs_currentUser') || 'null');
-    if (!currentUser) {
-        ul.innerHTML = '<li style="padding: var(--space-3);">Please log in to see notifications.</li>';
-        return;
-    }
+    if (!currentUser) return;
 
     try {
-        // fetching from the notification api which now queries mongodb
         const res = await fetch(`${NOTIFICATION_API}?email=${encodeURIComponent(currentUser.email)}`);
-        if (!res.ok) throw new Error('bad response');
         const data = await res.json();
-        
-        // mongodb returns an array of documents
         const items = data.notifications || [];
 
         if (items.length === 0) {
@@ -275,9 +267,7 @@ async function loadNotificationsPage() {
         }
 
         ul.innerHTML = items.map(n => {
-            // using the 'status' field from our mongoose model ('sent' vs 'viewed')
             const isUnread = n.status === 'sent';
-            
             return `
             <li style="padding: var(--space-4); background: var(--gray-100); border-radius: var(--radius-md); margin-bottom: var(--space-3);">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3);">
@@ -293,29 +283,19 @@ async function loadNotificationsPage() {
             </li>`;
         }).join('');
 
-        // adding event listeners for the mongodb _id
         ul.querySelectorAll('[data-mark-read]').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const id = btn.getAttribute('data-mark-read');
-                try {
-                    const r = await fetch(
-                        `${NOTIFICATION_API}/${id}/read?email=${encodeURIComponent(currentUser.email)}`,
-                        { method: 'PATCH' }
-                    );
-                    if (r.ok) loadNotificationsPage(); // refresh list after update
-                } catch (err) {
-                    console.error("error marking notification as read:", err);
-                }
+                await fetch(`${NOTIFICATION_API}/${id}/read?email=${encodeURIComponent(currentUser.email)}`, { method: 'PATCH' });
+                loadNotificationsPage();
             });
         });
     } catch (e) {
-        console.error("failed to load notifications:", e);
-        ul.innerHTML = '<li style="padding: var(--space-3);">Could not load notifications from server.</li>';
+        console.error(e);
     }
 }
 
-
-// join queue by saving to mongodb
+// join queue
 async function joinQueue(event, serviceId) {
     const joinBtn = event.currentTarget; 
     const currentUser = JSON.parse(localStorage.getItem('qs_currentUser'));
@@ -330,10 +310,10 @@ async function joinQueue(event, serviceId) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                serviceId: serviceId,
+                serviceId: serviceId.toString(),
                 userName: currentUser.name,
                 userEmail: currentUser.email,
-                userId: currentUser._id // using the database user ID
+                userId: currentUser._id
             })
         });
 
@@ -353,7 +333,7 @@ async function joinQueue(event, serviceId) {
 }
 
 // remove user from mongodb queue
-async function leaveQueue(serviceId) {
+window.leaveQueue = async function(serviceId) {
     if (!confirm('Are you sure you want to leave this queue?')) return;
     const currentUser = JSON.parse(localStorage.getItem('qs_currentUser'));
 
@@ -362,7 +342,7 @@ async function leaveQueue(serviceId) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-                serviceId: serviceId, 
+                serviceId: serviceId.toString(), 
                 userEmail: currentUser.email 
             })
         });
@@ -376,9 +356,8 @@ async function leaveQueue(serviceId) {
         }
     } catch (error) {
         console.error("Leave error:", error);
-        location.reload(); 
     }
-}
+};
 
 function escapeHtml(str) {
     const div = document.createElement('div');

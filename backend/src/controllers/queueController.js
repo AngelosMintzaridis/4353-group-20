@@ -1,7 +1,6 @@
-// importing mongoose models instead of memorydata arrays
 const QueueEntry = require('../models/QueueEntry');
 const Service = require('../models/Service');
-const History = require('../models/Notification'); // using the notification/history model
+const History = require('../models/Notification'); 
 
 const {
     recordQueueJoined,
@@ -103,12 +102,13 @@ exports.serveNext = async (req, res) => {
         servedEntry.status = 'served';
         await servedEntry.save();
 
-        // history logic - using notification model to track history
-        await History.create({
-            userId: servedEntry.userId,
-            message: `Served: ${service.name} at ${new Date().toLocaleString()}`,
-            status: 'sent'
-        });
+        if (servedEntry.userId) {
+            await History.create({
+                userId: servedEntry.userId,
+                message: `Served: ${service.name} at ${new Date().toLocaleString()}`,
+                status: 'sent'
+            });
+        }
 
         console.log(`[HISTORY] User ${servedEntry.userEmail} was officially Served.`);
         console.log(`[ADMIN] Served next: ${servedEntry.userEmail} for service ${service.name}`);
@@ -225,12 +225,13 @@ exports.leaveQueue = async (req, res) => {
             entry.status = 'cancelled';
             await entry.save();
 
-            // create history entry in notification collection
-            await History.create({
-                userId: entry.userId,
-                message: `Left Queue: ${service ? service.name : 'Unknown Service'}`,
-                status: 'sent'
-            });
+            if (entry.userId) {
+                await History.create({
+                    userId: entry.userId,
+                    message: `Left Queue: ${service ? service.name : 'Unknown Service'}`,
+                    status: 'sent'
+                });
+            }
 
             console.log(`[HISTORY] Recorded cancellation for ${userEmail}`);
             console.log(`[QUEUE] User ${userEmail} successfully removed from database`);
@@ -243,6 +244,7 @@ exports.leaveQueue = async (req, res) => {
 
         return res.status(404).json({ message: 'User was not found in this queue' });
     } catch (error) {
+        console.error("Leave Queue Error:", error); 
         res.status(500).json({ message: 'Error leaving queue', error: error.message });
     }
 };

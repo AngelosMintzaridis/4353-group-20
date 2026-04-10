@@ -1,13 +1,11 @@
 const mongoose = require('mongoose');
 
 const queueEntrySchema = new mongoose.Schema({
-    // reference to the service being joined
     serviceId: { 
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'Service', 
         required: true 
     },
-    // reference to the user - made optional in case of legacy sessions or guest logic
     userId: { 
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'UserCredential' 
@@ -20,12 +18,10 @@ const queueEntrySchema = new mongoose.Schema({
         type: String, 
         required: true 
     },
-    // changed required to false because position is calculated dynamically
     position: { 
         type: Number, 
         required: false 
     },
-    // tie-breaker for users with same priority
     priority: {
         type: Number,
         default: 0
