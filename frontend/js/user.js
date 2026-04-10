@@ -38,7 +38,6 @@ async function loadUserHistory() {
     if (!currentUser || !listContainer) return;
 
     try {
-        // fetching from the new history endpoint connected to mongodb
         const response = await fetch(`${QUEUE_API}/history/${encodeURIComponent(currentUser.email)}`);
         const historyData = await response.json();
 
@@ -47,12 +46,35 @@ async function loadUserHistory() {
             return;
         }
 
-        // map to list items using database fields
         listContainer.innerHTML = historyData.map(item => {
-            // Determine badge class and text based on the notification type
-            const isCancelled = item.type === 'cancelled';
-            const badgeClass = isCancelled ? 'badge-danger' : 'badge-success';
-            const statusText = isCancelled ? 'Cancelled' : 'Completed';
+            // Convert everything to lowercase for safe checking
+            const type = (item.type || "").toLowerCase();
+            const msg = (item.message || "").toLowerCase();
+            
+            // Logic for Badge Color and Text
+            let badgeClass = 'badge-success'; 
+            let statusText = 'Update';     
+            
+            // 1. Check if it's a "Left Queue" event
+            if (type === 'cancelled' || msg.includes('left') || msg.includes('cancel') || msg.includes('cancellation')) {
+                badgeClass = 'badge-danger';  // Red
+                statusText = 'Left Queue';
+            } 
+            // 2. Check if it's a "Joined" event
+            else if (type === 'queue_joined' || msg.includes('joined')) {
+                badgeClass = 'badge-primary'; // Blue
+                statusText = 'Joined';
+            } 
+            // 3. Check if it's a "Serviced" event
+            else if (type === 'served' || msg.includes('served')) {
+                badgeClass = 'badge-success'; // Green
+                statusText = 'Serviced';
+            }
+            // 4. Default for everything else (like "Front spots" notifications)
+            else {
+                badgeClass = 'badge-success';
+                statusText = 'Update';
+            }
 
             return `
                 <li style="padding-bottom: var(--space-3); border-bottom: 1px solid var(--gray-200);">
@@ -63,7 +85,7 @@ async function loadUserHistory() {
                     </span>
                 </li>
             `;
-        }).join(''); // Removed .reverse() because backend is now sorting newest first
+        }).join('');
 
     } catch (error) {
         console.error("History load error:", error);
@@ -95,7 +117,6 @@ async function renderUserStatus() {
         }
 
         const waitTime = status.estimatedWaitMinutes;
-        // Use MongoDB _id for the leaveQueue call
         const serviceId = status.service._id || status.service.id;
 
         container.innerHTML = `
@@ -139,7 +160,6 @@ async function loadAvailableServices() {
         }
 
         container.innerHTML = services.map(service => {
-            // handle mongodb _id comparison
             const serviceId = service._id || service.id;
             const activeServiceId = userStatus.inQueue ? (userStatus.service._id || userStatus.service.id) : null;
             const isJoined = userStatus.inQueue && activeServiceId === serviceId;
@@ -306,7 +326,7 @@ async function loadNotificationsPage() {
 }
 
 
-// join queue by saving to mongodb
+// join queue
 async function joinQueue(event, serviceId) {
     const joinBtn = event.currentTarget; 
     const currentUser = JSON.parse(localStorage.getItem('qs_currentUser'));

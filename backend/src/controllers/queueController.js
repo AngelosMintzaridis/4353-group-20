@@ -213,38 +213,46 @@ exports.leaveQueue = async (req, res) => {
     }
 
     try {
+        // 1. Find the entry
         const entry = await QueueEntry.findOne({ 
             serviceId: serviceId, 
             userEmail: userEmail, 
             status: 'waiting' 
         });
 
-        if (entry) {
-            const service = await Service.findById(serviceId);
-            
-            // update entry to cancelled status
-            entry.status = 'cancelled';
-            await entry.save();
-
-            if (entry.userId) {
-                await History.create({
-                    userId: entry.userId,
-                    message: `Left Queue: ${service ? service.name : 'Unknown Service'}`,
-                    status: 'sent',
-                    type: 'cancelled'
-                });
-            }
-
-            console.log(`[HISTORY] Recorded cancellation for ${userEmail}`);
-            console.log(`[QUEUE] User ${userEmail} successfully removed from database`);
-            
-            clearNearFrontForUserOnService(userEmail, serviceId);
-            syncNearFrontForService(serviceId);
-
-            return res.json({ message: 'Left queue successfully' });
+        if (!entry) {
+            return res.status(404).json({ message: 'User was not found in this queue' });
         }
 
-        return res.status(404).json({ message: 'User was not found in this queue' });
+        const service = await Service.findById(serviceId);
+        
+        // 2. Mark entry as cancelled in database
+        entry.status = 'cancelled';
+        await entry.save();
+
+        // 3. FORCE lookup the user ID to ensure we have a valid link for history
+        const user = await UserCredential.findOne({ email: userEmail.toLowerCase() });
+
+        if (user) {
+            // 4. Create history record with guaranteed ID
+            await History.create({
+                userId: user._id,
+                message: `You left "${service ? service.name : 'the queue'}" for ${userEmail}`,
+                status: 'sent',
+                type: 'cancelled'
+            });
+            console.log(`[REAL-FIX] History record created for ${userEmail}`);
+        } else {
+            console.log(`[ERROR] Could not find user in database for email: ${userEmail}`);
+        }
+
+        console.log(`[HISTORY] Recorded cancellation for ${userEmail}`);
+        console.log(`[QUEUE] User ${userEmail} successfully removed from database`);
+        
+        clearNearFrontForUserOnService(userEmail, serviceId);
+        syncNearFrontForService(serviceId);
+
+        return res.json({ message: 'Left queue successfully' });
     } catch (error) {
         console.error("Leave Queue Error:", error); 
         res.status(500).json({ message: 'Error leaving queue', error: error.message });
@@ -265,14 +273,19 @@ exports.getUserHistory = async (req, res) => {
             .populate('userId')
             .sort({ timestamp: -1 }); // Sorting by newest first
             
-        // Filtering by email with null-safe checks
-        const filteredHistory = userHistory.filter(h => 
-            h.userId && 
-            h.userId.email && 
-            h.userId.email.toLowerCase() === email.toLowerCase()
-        );
+        // Filtering by email with null-safe checks and fallback search in message for orphaned records
+        const filteredHistory = userHistory.filter(h => {
+            // Case 1: Population worked correctly (New records)
+            if (h.userId && h.userId.email && h.userId.email.toLowerCase() === email.toLowerCase()) {
+                return true;
+            }
+            // Case 2: Fallback for records with broken population links (looking for email in message)
+            if (h.message && h.message.toLowerCase().includes(email.toLowerCase())) {
+                return true;
+            }
+            return false;
+        });
         
-        // Always return an array to prevent frontend mapping errors
         res.json(filteredHistory);
     } catch (error) {
         console.error("History Fetch Error:", error);
@@ -286,7 +299,7 @@ exports.getUserStatus = async (req, res) => {
     const { email } = req.query;
 
     if (!email) {
-        return res.status(400).json({ message: 'Email is required' });
+        return res.status(400).json({ email: 'Email is required' });
     }
 
     try {
