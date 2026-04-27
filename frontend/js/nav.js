@@ -31,7 +31,6 @@ function renderNav(container) {
         return;
     }
 
-    const userInitials = getInitials(user.name);
     const isAdmin = user.role.toLowerCase() === 'administrator';
     const currentPage = getCurrentPage();
 
@@ -52,6 +51,7 @@ function renderNav(container) {
 
     const links = isAdmin ? adminLinks : userLinks;
 
+    // Render Sidebar
     container.innerHTML = `
         <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
             <div class="sidebar-header">
@@ -71,24 +71,54 @@ function renderNav(container) {
                         </a>
                     `).join('')}
                 </div>
-
-
             </nav>
 
             <div class="sidebar-footer">
-                <div class="sidebar-user">
-                    <div class="user-avatar">${userInitials}</div>
-                    <div class="user-info">
-                        <div class="user-name">${user.name}</div>
-                        <div class="user-role">${user.role}</div>
-                    </div>
-                    <button class="logout-btn" id="logoutBtn" aria-label="Log out" title="Log out">
-                        ${iconLogout()}
-                    </button>
-                </div>
+                <button class="logout-btn" id="logoutBtn" aria-label="Log out" title="Log out">
+                    ${iconLogout()} Logout
+                </button>
             </div>
         </aside>
     `;
+
+    // Render Top Header inside .app-main
+    const appMain = document.querySelector('.app-main');
+    if (appMain) {
+        const header = document.createElement('header');
+        header.className = 'top-header';
+        
+        const userInitials = getInitials(user.name);
+        
+        header.innerHTML = `
+            <div class="header-actions">
+                <div class="bell-wrapper">
+                    <button class="bell-btn" id="notificationBell">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                        <span class="bell-badge" id="bellBadge"></span>
+                    </button>
+                    <div class="notification-dropdown" id="notificationDropdown">
+                        <div class="dropdown-header">
+                            <h3>Notifications</h3>
+                            <a href="/frontend/pages/user/notifications.html">Show all</a>
+                        </div>
+                        <div class="dropdown-body" id="dropdownBody">
+                            <div style="padding: 1rem; text-align: center; color: var(--gray-500); font-size: 0.85rem;">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="top-user-profile">
+                    <div class="top-user-avatar">${userInitials}</div>
+                    <div class="top-user-info">
+                        <div class="top-user-name">${user.name}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        appMain.insertBefore(header, appMain.firstChild);
+        
+        initNotifications(user);
+    }
 
     // Attach logout listener
     const logoutBtn = document.getElementById('logoutBtn');
@@ -97,6 +127,79 @@ function renderNav(container) {
             localStorage.removeItem('qs_currentUser');
             window.location.href = '/frontend/pages/login.html';
         });
+    }
+}
+
+async function initNotifications(user) {
+    const bellBtn = document.getElementById('notificationBell');
+    const dropdown = document.getElementById('notificationDropdown');
+    const dropdownBody = document.getElementById('dropdownBody');
+    const badge = document.getElementById('bellBadge');
+    
+    // Toggle dropdown
+    bellBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle('show');
+        bellBtn.classList.toggle('active');
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.bell-wrapper')) {
+            dropdown.classList.remove('show');
+            bellBtn.classList.remove('active');
+        }
+    });
+
+    try {
+        const res = await fetch(`http://localhost:3000/api/notifications?email=${encodeURIComponent(user.email)}`);
+        const data = await res.json();
+        const items = data.notifications || [];
+        
+        const unreadCount = data.unreadCount || 0;
+        if (unreadCount > 0) {
+            badge.classList.add('visible');
+        }
+        
+        if (items.length === 0) {
+            dropdownBody.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--gray-500); font-size: 0.85rem;">No notifications yet.</div>';
+            return;
+        }
+        
+        // Show top 5
+        const preview = items.slice(0, 5);
+        dropdownBody.innerHTML = preview.map(n => {
+            const isUnread = n.status === 'sent';
+            return `
+            <a class="dropdown-item ${isUnread ? 'unread' : ''}" data-id="${n._id}">
+                ${n.message}
+                <span class="dropdown-item-time">${new Date(n.timestamp || n.createdAt).toLocaleString()}</span>
+            </a>`;
+        }).join('');
+        
+        // Mark read on click
+        dropdownBody.querySelectorAll('.dropdown-item').forEach(item => {
+            item.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const id = item.getAttribute('data-id');
+                if (item.classList.contains('unread')) {
+                    await fetch(`http://localhost:3000/api/notifications/${id}/read?email=${encodeURIComponent(user.email)}`, { method: 'PATCH' });
+                    item.classList.remove('unread');
+                    
+                    // Optimistically update badge
+                    const currentUnread = document.querySelectorAll('.dropdown-item.unread').length;
+                    if (currentUnread === 0) {
+                        badge.classList.remove('visible');
+                    }
+                }
+                dropdown.classList.remove('show');
+                bellBtn.classList.remove('active');
+            });
+        });
+        
+    } catch (err) {
+        dropdownBody.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--error); font-size: 0.85rem;">Error loading notifications.</div>';
+        console.error(err);
     }
 }
 

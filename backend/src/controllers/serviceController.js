@@ -28,7 +28,8 @@ exports.createService = async (req, res) => {
         console.log(`[admin] database: created new service: ${name}`);
         res.status(201).json(newService);
     } catch (error) {
-        res.status(500).json({ message: 'error saving to database', error: error.message });
+        console.error('[SERVICE CREATE ERROR]', error.message);
+        res.status(500).json({ message: error.message || 'error saving to database' });
     }
 };
 
@@ -51,7 +52,7 @@ exports.updateService = async (req, res) => {
         const updatedService = await Service.findByIdAndUpdate(
             id,
             { name, description, expectedDuration, priorityLevel },
-            { new: true } // returns the modified document
+            { returnDocument: 'after' } // returns the modified document
         );
 
         if (!updatedService) {

@@ -171,7 +171,6 @@ async function loadAvailableServices() {
                         <p class="text-muted">${escapeHtml(service.description)}</p>
                         <div class="service-details">
                             <span>⏱ ${service.expectedDuration} mins</span>
-                            <span class="badge">Priority: ${service.priorityLevel}</span>
                         </div>
                     </div>
                     <div class="card-footer">
@@ -298,18 +297,14 @@ async function loadNotificationsPage() {
 
         ul.innerHTML = items.map(n => {
             const isUnread = n.status === 'sent';
+            const timeAgo = new Date(n.timestamp || n.createdAt).toLocaleString();
             return `
-            <li style="padding: var(--space-4); background: var(--gray-100); border-radius: var(--radius-md); margin-bottom: var(--space-3);">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3);">
-                    <div>
-                        ${isUnread ? '<span class="badge badge-warning">New</span>' : ''}
-                        <p style="margin: var(--space-2) 0 0;">${escapeHtml(n.message)}</p>
-                        <div style="font-size: 0.85rem; color: var(--gray-600); margin-top: var(--space-2);">
-                            ${new Date(n.timestamp || n.createdAt).toLocaleString()}
-                        </div>
-                    </div>
-                    ${isUnread ? `<button type="button" class="btn btn-outline btn-sm" data-mark-read="${n._id}">Mark read</button>` : ''}
+            <li class="notif-item ${isUnread ? 'notif-unread' : ''}">
+                <div class="notif-content">
+                    <p class="notif-message">${escapeHtml(n.message)}</p>
+                    <span class="notif-time">${timeAgo}</span>
                 </div>
+                ${isUnread ? `<button type="button" class="notif-mark-btn" data-mark-read="${n._id}">Mark read</button>` : '<span class="notif-read-label">Read</span>'}
             </li>`;
         }).join('');
 

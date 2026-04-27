@@ -483,6 +483,48 @@ async function serveNextUser() {
 }
 
 /* ================================================
+   Report Export
+   ================================================ */
+
+async function exportReport() {
+    const btn = document.getElementById('exportReportBtn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = 'Generating…';
+
+    try {
+        const res = await fetch('http://localhost:3000/api/reports/export', {
+            headers: adminHeaders()
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            showNotification(err.message || 'Export failed.', 'error');
+            return;
+        }
+
+        // Download the CSV blob
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `QueueSmart_Report_${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+
+        showNotification('Report downloaded!', 'success');
+    } catch (error) {
+        console.error('Export error:', error);
+        showNotification('Could not connect to server.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+/* ================================================
    Shared Helpers
    ================================================ */
 

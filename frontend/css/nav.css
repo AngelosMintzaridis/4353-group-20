@@ -9,8 +9,8 @@
     left: 0;
     width: var(--sidebar-width);
     height: 100vh;
-    background: #fff;
-    border-right: 1px solid var(--gray-200);
+    background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
     display: flex;
     flex-direction: column;
     z-index: 100;
@@ -22,8 +22,9 @@
     display: flex;
     align-items: center;
     gap: var(--space-3);
-    padding: var(--space-5) var(--space-4);
-    border-bottom: 1px solid var(--gray-200);
+    padding: 0 var(--space-4);
+    height: var(--header-height);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* ---------- QueueSmart Logo (Sidebar) ---------- */
@@ -35,9 +36,9 @@
 
 .icon-q {
     position: relative;
-    width: 32px;  /* slightly smaller for sidebar */
+    width: 32px;
     height: 32px;
-    border: 4px solid #0f172a;
+    border: 4px solid #fff;
     border-radius: 50%;
     box-sizing: border-box;
 }
@@ -51,11 +52,11 @@
     transform: translate(-50%, -50%);
     width: 3.5px;
     height: 3.5px;
-    background: #0f172a;
+    background: #fff;
     border-radius: 50%;
     box-shadow:
-        -6px 0 0 0 #0f172a,
-         6px 0 0 0 #0f172a;
+        -6px 0 0 0 #fff,
+         6px 0 0 0 #fff;
 }
 
 /* Arrow tail — flow out of the queue */
@@ -66,7 +67,7 @@
     right: -3px;
     width: 12px;
     height: 4px;
-    background: #0f172a;
+    background: #fff;
     transform: rotate(45deg);
     border-radius: 2px;
 }
@@ -74,8 +75,8 @@
 .logo-text {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     font-weight: 700;
-    font-size: 1.25rem; /* slightly smaller for sidebar */
-    color: #0f172a;
+    font-size: 1.25rem;
+    color: #fff;
     letter-spacing: -0.5px;
 }
 
@@ -94,7 +95,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--gray-400);
+    color: rgba(255, 255, 255, 0.35);
     padding: 0 var(--space-3);
     margin-bottom: var(--space-2);
 }
@@ -104,23 +105,23 @@
     align-items: center;
     gap: var(--space-3);
     padding: var(--space-2) var(--space-3);
-    color: var(--gray-600);
+    color: rgba(255, 255, 255, 0.55);
     border-radius: var(--radius-sm);
     font-size: var(--font-size-sm);
     text-decoration: none;
     margin-bottom: 2px;
-    transition: background var(--transition-fast);
+    transition: all var(--transition-fast);
 }
 
 .nav-link:hover {
-    color: var(--gray-900);
-    background: var(--gray-100);
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
     text-decoration: none;
 }
 
 .nav-link.active {
-    color: var(--gray-900);
-    background: var(--gray-100);
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
     font-weight: 500;
 }
 
@@ -132,67 +133,219 @@
 
 /* ---------- Sidebar Footer ---------- */
 .sidebar-footer {
-    padding: var(--space-3);
-    border-top: 1px solid var(--gray-200);
-}
-
-.sidebar-user {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    padding: var(--space-2) var(--space-3);
-}
-
-.user-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: var(--gray-900);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--font-size-xs);
-    font-weight: 600;
-    color: #fff;
-    flex-shrink: 0;
-}
-
-.user-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.user-name {
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-    color: var(--gray-900);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.user-role {
-    font-size: var(--font-size-xs);
-    color: var(--gray-400);
-    text-transform: capitalize;
+    padding: var(--space-4);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .logout-btn {
-    background: none;
-    border: none;
-    color: var(--gray-400);
+    width: 100%;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.55);
     cursor: pointer;
-    padding: var(--space-1);
-    border-radius: var(--radius-sm);
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
     display: flex;
     align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    transition: all var(--transition-fast);
 }
 
 .logout-btn:hover {
-    color: var(--error);
+    background: rgba(220, 38, 38, 0.15);
+    color: #fca5a5;
+    border-color: rgba(220, 38, 38, 0.25);
 }
 
 .logout-btn svg {
     width: 16px;
     height: 16px;
+}
+
+/* ========================================
+   Top Header & Notification Bell
+   ======================================== */
+
+.top-header {
+    position: fixed;
+    top: 0;
+    left: var(--sidebar-width);
+    right: 0;
+    height: var(--header-height);
+    background: #fff;
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 var(--space-8);
+    z-index: 90;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+}
+
+/* ---------- Notification Bell ---------- */
+.bell-wrapper {
+    position: relative;
+}
+
+.bell-btn {
+    background: none;
+    border: none;
+    color: var(--gray-500);
+    cursor: pointer;
+    padding: var(--space-2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+
+.bell-btn:hover, .bell-btn.active {
+    background: var(--gray-100);
+    color: var(--gray-900);
+}
+
+.bell-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.bell-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 8px;
+    height: 8px;
+    background: var(--error);
+    border-radius: 50%;
+    display: none;
+}
+
+.bell-badge.visible {
+    display: block;
+}
+
+/* ---------- Notification Dropdown ---------- */
+.notification-dropdown {
+    position: absolute;
+    top: calc(100% + var(--space-2));
+    right: -10px;
+    width: 320px;
+    background: #fff;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md), 0 0 0 1px var(--gray-200);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all var(--transition-fast);
+    z-index: 100;
+}
+
+.notification-dropdown.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.dropdown-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.dropdown-header h3 {
+    font-size: var(--font-size-sm);
+    margin: 0;
+}
+
+.dropdown-header a {
+    font-size: var(--font-size-xs);
+    color: var(--gray-500);
+}
+
+.dropdown-body {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: var(--space-2) 0;
+}
+
+.dropdown-item {
+    display: block;
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--font-size-sm);
+    color: var(--gray-700);
+    text-decoration: none;
+    border-bottom: 1px solid var(--gray-100);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.dropdown-item:hover {
+    background: var(--gray-50);
+}
+
+.dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.dropdown-item.unread {
+    background: #f8fafc;
+    border-left: 3px solid var(--primary);
+}
+
+.dropdown-item-time {
+    display: block;
+    font-size: var(--font-size-xs);
+    color: var(--gray-400);
+    margin-top: var(--space-1);
+}
+
+/* ---------- Top User Profile ---------- */
+.top-user-profile {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding-left: var(--space-6);
+    border-left: 1px solid var(--gray-200);
+}
+
+.top-user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--gray-900);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+}
+
+.top-user-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.top-user-name {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--gray-900);
+    line-height: 1.2;
+}
+
+.top-user-role {
+    font-size: var(--font-size-xs);
+    color: var(--gray-500);
+    text-transform: capitalize;
 }

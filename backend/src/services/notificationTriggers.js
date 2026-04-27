@@ -50,7 +50,7 @@ async function syncNearFrontForService(serviceIdKey) {
                 await pushNotification({
                     userEmail: entry.userEmail,
                     type: 'close_to_serve',
-                    message: `You are in the front spots for "${service.name}" (position ${position}).`,
+                    message: `You are almost up for "${service.name}"! You are currently at position ${position}.`,
                     serviceId: service._id,
                     serviceName: service.name
                 });
@@ -65,7 +65,7 @@ async function recordQueueJoined(userEmail, service, position, queueLength) {
     await pushNotification({
         userEmail,
         type: 'queue_joined',
-        message: `You joined "${service.name}" (position ${position} of ${queueLength}).`,
+        message: `You successfully joined "${service.name}" at position ${position}.`,
         serviceId: service._id,
         serviceName: service.name
     });

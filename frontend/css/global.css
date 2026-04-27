@@ -39,7 +39,8 @@
     --error-light: #fee2e2;
 
     /* Layout */
-    --sidebar-width: 240px;
+    --sidebar-width: 200px;
+    --header-height: 70px;
 
     /* Typography */
     --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -226,7 +227,7 @@ h3 {
 .app-main {
     flex: 1;
     margin-left: var(--sidebar-width);
-    padding: var(--space-8);
+    padding: calc(var(--space-8) + var(--header-height)) var(--space-8) var(--space-8);
 }
 
 /* ---------- Card ---------- */
@@ -305,4 +306,73 @@ h3 {
 .notice.fade {
   opacity: 0;
   transition: opacity 250ms ease;
+}
+
+/* =========================
+   Notifications Page Items
+   ========================= */
+.notif-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    transition: background var(--transition-fast);
+}
+
+.notif-item:hover {
+    background: var(--gray-50);
+}
+
+.notif-item.notif-unread {
+    border-left: 3px solid var(--primary);
+    background: #f8fafc;
+}
+
+.notif-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.notif-message {
+    font-size: var(--font-size-sm);
+    color: var(--gray-800);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.notif-time {
+    font-size: var(--font-size-xs);
+    color: var(--gray-400);
+    margin-top: var(--space-1);
+    display: block;
+}
+
+.notif-mark-btn {
+    flex-shrink: 0;
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    color: var(--gray-600);
+    background: var(--gray-100);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.notif-mark-btn:hover {
+    background: var(--gray-900);
+    color: #fff;
+    border-color: var(--gray-900);
+}
+
+.notif-read-label {
+    flex-shrink: 0;
+    font-size: var(--font-size-xs);
+    color: var(--gray-400);
+    font-weight: 500;
 }

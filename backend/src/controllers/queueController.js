@@ -107,7 +107,7 @@ exports.serveNext = async (req, res) => {
         if (servedEntry.userId) {
             await History.create({
                 userId: servedEntry.userId,
-                message: `Served: ${service.name} at ${new Date().toLocaleString()}`,
+                message: `You were served for "${service.name}"`,
                 status: 'sent',
                 type: 'served'
             });
@@ -246,7 +246,7 @@ exports.leaveQueue = async (req, res) => {
             // 4. Create history record with guaranteed ID
             await History.create({
                 userId: user._id,
-                message: `You left "${service ? service.name : 'the queue'}" for ${userEmail}`,
+                message: `You left "${service ? service.name : 'the queue'}"`,
                 status: 'sent',
                 type: 'cancelled'
             });
